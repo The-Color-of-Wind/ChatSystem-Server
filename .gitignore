@@ -1,0 +1,39 @@
+# 编译文件
+*.o
+*.a
+*.so
+*.out
+*.exe
+*.lo
+*.la
+*.lib
+*.dll
+
+# 编译工具生成的文件
+Makefile
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CMakeLists.txt.user
+CMakeLists.txt.user.save
+build/
+
+# IDE 生成的文件
+.vscode/
+.idea/
+
+# 临时文件
+*~
+*.swp
+*.bak
+*.tmp
+
+# 操作系统生成的文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 包含调试符号的文件
+*.dSYM/
