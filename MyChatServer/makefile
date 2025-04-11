@@ -1,4 +1,4 @@
-src1 = $(wildcard main.cpp ./conn/chat_conn.cpp ./conn/user.cpp ./conn/Server.cpp ./CGImysql/sql_connect_pool.cpp ./log/log.cpp)
+src1 = $(wildcard main.cpp ./ChatConn/chat_conn.cpp ./ChatConn/user.cpp ./MysqlConnectPool/sql_connect_pool.cpp ./log/log.cpp ./ChatMapping/ChatMapping.cpp ./ChatServer/ChatServer.cpp ./IniConfig/IniConfig.cpp)
 obj1 = $(patsubst %.cpp, %.o, $(src1))
 
 myArgs = -Wall -g -lpthread -I./conn -I/usr/include/jsoncpp -ljsoncpp -lmysqlclient

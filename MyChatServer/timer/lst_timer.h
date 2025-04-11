@@ -2,6 +2,7 @@
 #define LST_TIMER
 
 #include<time.h>
+#include <netinet/in.h>
 
 class util_timer;
 

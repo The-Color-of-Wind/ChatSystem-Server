@@ -38,18 +38,32 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <queue>
 #include "json.hpp"
 using json = nlohmann::json;
 #include "../lock/locker.h"
-#include "../CGImysql/sql_connect_pool.h"
+#include "../MysqlConnectPool/sql_connect_pool.h"
+#include "../log/log.h"
+#include "../ChatMapping/ChatMapping.h"
 
 #include "user.h"
-#include "Server.h"
 
 using namespace std;
 
 class chat_conn
 {
+public:	// 分解数据
+	bool parse_messages();
+	enum ReadState {	// 读取信息状态机
+		READ_LENGTH,
+		READ_BODY
+	};
+	ReadState recv_state;	// 初始读取信息头
+	size_t head_len = 4;
+	queue<Json::Value> jsonTaskQueue;
+	Json::Value jsonData;
+
+
 public:
 
 	//设置读取文件的名称m_real_file大小
@@ -58,7 +72,7 @@ public:
 	static const int READ_BUFFER_SIZE = 2048;
 	//设置写缓冲区m_write_buf大小
 	static const int WRITE_BUFFER_SIZE = 2048;
-	
+
 public:
 	//可以添加功能
 	enum CHAT_CODE
@@ -80,13 +94,14 @@ public:
 	};
 
 public:
-	void init(int sockfd, const sockaddr_in &addr);
+	void init(int sockfd, const sockaddr_in& addr);
 	void init();
-
+	void readInit();
+	void writeInit();
 	void removeUser();
 
 	void init_login(string id, string password);
-	
+
 	void init_register(string phone, string name, string password);
 
 	void process();
@@ -96,26 +111,27 @@ public:
 	bool parseJsonData();
 	bool write();
 	bool serverSendMessage();
-	
+
+	void wirteWriteBuf(string str);
 
 
-	string getMysql_UserResult(const string &type, const string &sqlStatement);
-	string setMysql_UserResult(const string &type, const string &sqlStatement);
-	string getMysql_FriendsResult(const string &type, const string &sqlStatement);
-	string getMysql_ChatsResult(const string &type, const string &sqlStatement);
-	string sendMessage_Mysql(const string &type, string &sqlStatement);
+	string getMysql_UserResult(const string& type, const string& sqlStatement);
+	string setMysql_UserResult(const string& type, const string& sqlStatement);
+	string getMysql_FriendsResult(const string& type, const string& sqlStatement);
+	string getMysql_ChatsResult(const string& type, const string& sqlStatement);
+	string sendMessage_Mysql(const string& type, string& sqlStatement);
 	string updateChat_Mysql();
-	string getFriendsUnreadMessages_Mysql(const string &type, const string &sqlStatement);
-	string searchUserInformation_Mysql(const string &type, const string &sqlStatement);
-	string modifyFriend_Mysql(const string &type, const string &sqlStatement);
+	string getFriendsUnreadMessages_Mysql(const string& type, const string& sqlStatement);
+	string searchUserInformation_Mysql(const string& type, const string& sqlStatement);
+	string modifyFriend_Mysql(const string& type, const string& sqlStatement);
 
 
-	sockaddr_in *get_address()
+	sockaddr_in* get_address()
 	{
 		return &m_address;
 	}
 
-	void setConnPool(connection_pool *connPool) {
+	void setConnPool(connection_pool* connPool) {
 		this->connPool = connPool;
 	}
 
@@ -124,11 +140,11 @@ public:
 	//每一用户连接共有的
 	static int m_epollfd;
 	static int m_user_count;
-	MYSQL *mysql;
+	MYSQL* mysql;
 
 private:
-	connection_pool *connPool;
-	User *user;
+	connection_pool* connPool;
+	User* user;
 
 	int m_sockfd;
 	sockaddr_in m_address;
@@ -144,6 +160,7 @@ private:
 
 	//存储发出的响应数据
 	char m_write_buf[WRITE_BUFFER_SIZE];
+	locker write_lock;
 	//指示buffer中的长度
 	int m_write_idx;
 
@@ -152,11 +169,7 @@ private:
 	int bytes_to_send;		//剩余发送字节数
 	int bytes_have_send;	//已发送字节数
 
-	Json::Value jsonData;
-	//json receiveResponseJsonArray;
-	//vector<Json::Value> receiveResponseJsonVector;
-	//json sendResponseJsonArray;
-	//string jsonStr;
+	//Json::Value jsonData;
 
 	//判断是发信息还是回复
 	bool sendMessage = false;

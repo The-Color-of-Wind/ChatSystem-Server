@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include<exception>
 #include "../lock/locker.h"
-#include "../CGImysql/sql_connect_pool.h"
+#include "../MysqlConnectPool/sql_connect_pool.h"
 
 
 template<typename T>

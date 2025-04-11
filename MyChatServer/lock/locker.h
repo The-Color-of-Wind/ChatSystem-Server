@@ -4,6 +4,8 @@
 #include<pthread.h>
 #include<semaphore.h>
 #include<exception>
+#include <ostream>
+#include <iostream>
 
 class sem
 {
@@ -45,6 +47,8 @@ public:
 	{
 		if (pthread_mutex_init(&m_mutex, NULL) != 0)
 		{
+			std::cerr << "[locker] mutex 初始化失败，错误码：" << errno << std::endl;
+			abort();  // 直接退出，防止继续使用坏的锁
 			throw std::exception();
 		}
 	}
