@@ -9,7 +9,7 @@
 5. [服务器框架](#服务器框架)
 6. [类概述](#类概述)
 7. [硬件信息](#硬件信息)
-8. [项目构建](项目构建)
+8. [项目运行](#项目运行)
 9. [更新日志](#更新日志)（QPS优化）
 10. [致谢](#致谢)
    
@@ -62,8 +62,8 @@
 ---
 
 ## 服务器框架
-![17cbcaa469b8cabf301f1f46c5eec79](https://github.com/user-attachments/assets/79878936-25bb-45c1-9fb8-c0420581f572)
-![67482f768071677e8eb44c841035083](https://github.com/user-attachments/assets/f8f68a2b-4542-4edd-9f86-b1178da9703d)
+![55857738ed533bb911103e999148fb0](https://github.com/user-attachments/assets/4978336a-a5e4-41e3-b974-c24102199cfc)
+![7b1cca322ae53001663766a33e3e685](https://github.com/user-attachments/assets/5c54e15a-cf95-42ee-b578-963c651635a2)
 
 ---
 
@@ -144,4 +144,5 @@
 
 ## 致谢
 Linux高性能服务器编程，游双著.
+
 感谢前辈的项目引路：https://github.com/qinguoyi/TinyWebServer?tab=readme-ov-file
