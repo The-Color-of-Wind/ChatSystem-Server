@@ -7,12 +7,11 @@
 3. [已实现功能](#已实现功能)
 4. [Demo演示](#Demo演示)
 5. [服务器框架](#服务器框架)
-6. 
-7. [界面概述](#界面概述)
-8. [类概述](#类概述)
-9. [项目构建](项目构建)
-10. [更新日志](#更新日志)（QPS优化）
-11. [致谢](#致谢)
+6. [类概述](#类概述)
+7. [硬件信息](#硬件信息)
+8. [项目构建](项目构建)
+9. [更新日志](#更新日志)（QPS优化）
+10. [致谢](#致谢)
    
 ---
 
@@ -69,25 +68,27 @@
 ---
 
 ## 类概述
-[业务处理](ModuleDescription/ChatConn.md)
-
-[socket映射](ModuleDescription/ChatMapping.md)
-
-[总服务](ModuleDescription/ChatServer.md)
 
 [读取配置文件](ModuleDescription/IniConfig.md)
 
-[锁](ModuleDescription/lock.md)
+[网络通信](ModuleDescription/ChatServer.md)
 
-[日志](ModuleDescription/log.md)
-
-[数据库连接池](ModuleDescription/MysqlConnectPool.md)
+[业务处理](ModuleDescription/ChatConn.md)
 
 [线程池](ModuleDescription/ThreadPool.md)
 
+[数据库连接池](ModuleDescription/MysqlConnectPool.md)
+
+[锁](ModuleDescription/lock.md)
+
+[id && fd 映射](ModuleDescription/ChatMapping.md)
+
+[日志](ModuleDescription/log.md)
+
 ---
 
-## 处理器内核
+## 硬件信息
+
 - 处理器：4
 - 内核：4
 - 内存：3.0GB
@@ -95,10 +96,20 @@
 
 ---
 
-## 项目构建
-- 
-- 
-- 
+## 项目运行
+
+- 环境：
+  - 操作系统：Ubuntu 20.04
+  - 数据库：MySQL 8.0.41 （数据库表私聊我）
+  - 
+- 构建
+  - sudo apt-get install g++
+  - sudo apt-get install make
+  - sudo apt-get install libjsoncpp-dev
+  - sudo apt-get install libmysqlclient-dev
+  - make
+  - 修改配置文件（端口默认12345）
+  - ./startserv
 
 ---
 
@@ -126,10 +137,11 @@
 | **通信成功率**| 100%| 100% |
 
 > *注*：
-> - *由于自定义消息格式，只能自定义 TCP Sampler，但由于代码不够完善，导致登录时延都出现了问题*
+> - *由于自定义消息格式，只能自定义 TCP Sampler，但由于代码不够完善，导致登录时延都出现了问题(更改中)*
 > - *发送信息成功率达到100%，但由于互斥锁机制，导致吞吐量急速下降*
 
 ---
 
 ## 致谢
-
+Linux高性能服务器编程，游双著.
+感谢前辈的项目引路：https://github.com/qinguoyi/TinyWebServer?tab=readme-ov-file
