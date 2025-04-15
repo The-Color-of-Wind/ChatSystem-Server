@@ -69,13 +69,21 @@
 ---
 
 ## 类概述
-[用户类](ClassDescription/user.md)
+[业务处理](ModuleDescription/ChatConn.md)
 
-[好友类](ClassDescription/userfriend.md)
+[socket映射](ModuleDescription/ChatMapping.md)
 
-[聊天框类](ClassDescription/userchat.md)
+[总服务](ModuleDescription/ChatServer.md)
 
-[信息类](ClassDescription/message.md)
+[读取配置文件](ModuleDescription/IniConfig.md)
+
+[锁](ModuleDescription/lock.md)
+
+[日志](ModuleDescription/log.md)
+
+[数据库连接池](ModuleDescription/MysqlConnectPool.md)
+
+[线程池](ModuleDescription/ThreadPool.md)
 
 ---
 
