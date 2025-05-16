@@ -45,29 +45,26 @@ using json = nlohmann::json;
 #include "../MysqlConnectPool/sql_connect_pool.h"
 #include "../log/log.h"
 #include "../ChatMapping/ChatMapping.h"
+#include "../ThreadPool/ThreadPool.h"
+#include "../TaskQueue/DBTaskQueue.h"
 
 #include "user.h"
 
 using namespace std;
 
-class chat_conn
+class chat_conn : public std::enable_shared_from_this<chat_conn>
 {
 public:	// 分解数据
-	bool parse_messages();
-	enum ReadState {	// 读取信息状态机
-		READ_LENGTH,
-		READ_BODY
-	};
-	ReadState recv_state;	// 初始读取信息头
-	size_t head_len = 4;
-	queue<Json::Value> jsonTaskQueue;
-	Json::Value jsonData;
 
+	chat_conn(int m_epollfd_, int m_sockfd_, int m_eventfd_, ThreadPool<chat_conn>* pool_, DBTaskQueue* dbTaskQueue_=nullptr) : m_epollfd(m_epollfd_), m_sockfd(m_sockfd_), m_eventfd(m_eventfd_), pool(pool_), dbTaskQueue(dbTaskQueue_), head_len(4) {
+		user = new User();
+
+		init();
+
+	}
 
 public:
 
-	//设置读取文件的名称m_real_file大小
-	static const int FILENAME_LEN = 200;
 	//设置读缓冲区m_read_buf大小
 	static const int READ_BUFFER_SIZE = 2048;
 	//设置写缓冲区m_write_buf大小
@@ -105,49 +102,48 @@ public:
 	void init_register(string phone, string name, string password);
 
 	void process();
-	CHAT_CODE process_read();
-	bool process_write(CHAT_CODE ret);
+	CHAT_CODE process_read(Json::Value jsonData);
+	bool process_write(CHAT_CODE ret, Json::Value jsonData);
+
 	bool read_once();
 	bool parseJsonData();
 	bool write();
+	bool receive();
 	bool serverSendMessage();
 
 	void wirteWriteBuf(string str);
 
 
-	string getMysql_UserResult(const string& type, const string& sqlStatement);
-	string setMysql_UserResult(const string& type, const string& sqlStatement);
-	string getMysql_FriendsResult(const string& type, const string& sqlStatement);
-	string getMysql_ChatsResult(const string& type, const string& sqlStatement);
-	string sendMessage_Mysql(const string& type, string& sqlStatement);
-	string updateChat_Mysql();
-	string getFriendsUnreadMessages_Mysql(const string& type, const string& sqlStatement);
-	string searchUserInformation_Mysql(const string& type, const string& sqlStatement);
-	string modifyFriend_Mysql(const string& type, const string& sqlStatement);
+	string getMysql_UserResult(const string& type, const string& sqlStatement, Json::Value jsonData);
+	string setMysql_UserResult(const string& type, const string& sqlStatement, Json::Value jsonData);
+	string getMysql_FriendsResult(const string& type, const string& sqlStatement, Json::Value jsonData);
+	string getMysql_ChatsResult(const string& type, const string& sqlStatement, Json::Value jsonData);
+	string sendMessage_Mysql(const string& type, string& sqlStatement, Json::Value jsonData);
+	string updateChat_Mysql(Json::Value jsonData);
+	string getFriendsUnreadMessages_Mysql(const string& type, const string& sqlStatement, Json::Value jsonData);
+	string searchUserInformation_Mysql(const string& type, const string& sqlStatement, Json::Value jsonData);
+	string modifyFriend_Mysql(const string& type, const string& sqlStatement, Json::Value jsonData);
 
-
-	sockaddr_in* get_address()
-	{
-		return &m_address;
-	}
 
 	void setConnPool(connection_pool* connPool) {
 		this->connPool = connPool;
 	}
 
 	bool getSendMessage() { return this->sendMessage; }
+
+	bool parse_messages();
+
 public:
 	//每一用户连接共有的
-	static int m_epollfd;
-	static int m_user_count;
+	int m_epollfd;
 	MYSQL* mysql;
+	int m_sockfd;
+	int m_eventfd;
 
-private:
 	connection_pool* connPool;
 	User* user;
 
-	int m_sockfd;
-	sockaddr_in m_address;
+	
 
 	//存储读取的请求数据
 	char m_read_buf[READ_BUFFER_SIZE];
@@ -173,7 +169,27 @@ private:
 
 	//判断是发信息还是回复
 	bool sendMessage = false;
-	int sendSocketFd;
+
+	size_t head_len = 4;
+
+	ThreadPool<chat_conn>* pool;
+	DBTaskQueue* dbTaskQueue;
+
+
+
+	// 新消息入队并尝试提交处理任务
+	void push_message(const std::string& msg, ThreadPool<chat_conn>& pool);
+public:
+	std::mutex mtx;
+	std::queue<std::string> msg_queue; // 消息队列
+	bool is_processing;                // 是否正在处理中
+
+
+	// 提交下一个处理任务（只能由线程池线程调用）
+	void submit_next(ThreadPool<chat_conn>& pool);
+
+	// 实际处理消息逻辑（示例）
+	void handle_message(const std::string& msg);
 };
 
 #endif

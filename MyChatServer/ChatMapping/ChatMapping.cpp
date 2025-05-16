@@ -2,34 +2,29 @@
 
 // 添加或更新映射
 
-void ChatMapping::addUserSocket(const string& userId, int socketFd) {
+void ChatMapping::addUserSocket(const string& userId, int subReactorId, chat_conn* conn) {
 
-	mapLocker.lock();
+	unique_lock<shared_mutex> lock(map_rw_mutex);
 
-	userSocketMap[userId] = socketFd;
-	mapLocker.unlock();
+	userSocketMap[userId] = make_pair(subReactorId, conn);
 
 }
 
-
 // 查找 userId 对应的 socket
-int ChatMapping::getSocketByUserId(const string& userId) {
-	mapLocker.lock();
-	if (userSocketMap.find(userId) != userSocketMap.end()) {
-		int userSocket = userSocketMap[userId];
-		mapLocker.unlock();
-		return userSocket;
+optional<pair<int, chat_conn*>> ChatMapping::getSocketByUserId(const string& userId) {
+	shared_lock<shared_mutex> lock(map_rw_mutex);
+	auto it = userSocketMap.find(userId);
+	if (it != userSocketMap.end()) {
+		int subReactorId = it->second.first;
+		chat_conn* conn = it->second.second;
+		return make_pair(subReactorId, conn);
 	}
-	mapLocker.unlock();
-	return -1; // 返回 -1 表示没有找到对应的 socket
+	return nullopt; // 返回 -1 表示没有找到对应的 socket
 }
 
 void ChatMapping::removeUserSocket(const string& userId)
 {
-	mapLocker.lock();
-	if (userSocketMap.find(userId) != userSocketMap.end()) {
-		userSocketMap[userId] = -1;
-	}
-	mapLocker.unlock();
+	unique_lock<shared_mutex> lock(map_rw_mutex);
+	userSocketMap.erase(userId);
 	return;
 }

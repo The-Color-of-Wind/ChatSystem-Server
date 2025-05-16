@@ -16,10 +16,9 @@ connection_pool *connection_pool::GetInstance()
 	static connection_pool connPool;
 	return &connPool;
 }
-
 void connection_pool::init(string url, string User, string PassWord, string DBName, int Port, unsigned int MaxConn)
 {
-	//初始化数据库信息
+	// 初始化数据库信息
 	this->url = url;
 	this->Port = Port;
 	this->User = User;
@@ -27,32 +26,34 @@ void connection_pool::init(string url, string User, string PassWord, string DBNa
 	this->DatabaseName = DBName;
 
 	lock.lock();
-	printf("init action\n");
-	int s = 0;
-	//创建MaxConn条数据库连接
-	for (int i = 0; i < MaxConn; i++) {
-		MYSQL *con = NULL;
-		con = mysql_init(con);
-		if (con == NULL) {
-			cout << "Error:" << mysql_error(con);
-			printf("mysql_init error\n");
+	printf("init connection_pool\n");
+
+	this->MaxConn = MaxConn;
+	this->CurConn = 0;
+	this->FreeConn = 0;
+
+	// 先初始化信号量为 0，等连接成功后再逐个 post
+	reserve = sem(0);
+
+	for (int i = 0; i < MaxConn; ++i) {
+		MYSQL* con = mysql_init(nullptr);
+		if (con == nullptr) {
+			std::cerr << "mysql_init error\n";
 			exit(1);
 		}
-		con = mysql_real_connect(con, url.c_str(), User.c_str(), PassWord.c_str(), DBName.c_str(), Port, NULL, 0);
 
-		if (con == NULL) {
-			cout << "Error:" << mysql_error(con);
-			printf("mysql_real_connect error\n");
+		con = mysql_real_connect(con, url.c_str(), User.c_str(), PassWord.c_str(),
+			DBName.c_str(), Port, nullptr, 0);
+		if (con == nullptr) {
+			std::cerr << "mysql_real_connect error: " << mysql_error(con) << "\n";
 			exit(1);
 		}
 
 		connList.push_back(con);
 		++FreeConn;
-	}
-	//将信号量初始化为最大连接次数
-	reserve = sem(FreeConn);
 
-	this->MaxConn = FreeConn;
+		reserve.post();  // 初始化成功后 post 信号量
+	}
 
 	lock.unlock();
 }
@@ -98,16 +99,13 @@ int connection_pool::GetFreeConn()
 void connection_pool::DestroyPool()
 {
 	lock.lock();
-	if (connList.size() > 0) {
-		list<MYSQL *>::iterator it;
-		for (it = connList.begin(); it != connList.end(); it++) {
-			MYSQL *con = *it;
-			mysql_close(con);
+	if (!connList.empty()) {
+		for (auto conn : connList) {
+			mysql_close(conn);
 		}
+		connList.clear();
 		CurConn = 0;
 		FreeConn = 0;
-		connList.clear();
-		lock.unlock();
 	}
 	lock.unlock();
 }
@@ -118,12 +116,17 @@ connectionRAII::connectionRAII(MYSQL **SQL, connection_pool *connPool)
 {
 	*SQL = connPool->GetConnection();
 
+	assert(SQL != NULL);
 	this->conRAII = *SQL;
 	this->poolRAII = connPool;
 }
 connectionRAII::~connectionRAII()
 {
-	this->poolRAII->ReleaseConnection(this->conRAII);
+	if (this->conRAII && this->poolRAII) {
+		this->poolRAII->ReleaseConnection(this->conRAII);
+		this->conRAII = nullptr;
+	}
+	//this->poolRAII->ReleaseConnection(this->conRAII);
 }
 
 

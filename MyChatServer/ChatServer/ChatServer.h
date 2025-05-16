@@ -8,6 +8,7 @@
 
 #include "../IniConfig/IniConfig.h"
 #include "../MysqlConnectPool/sql_connect_pool.h"
+#include "../ThreadPool/LockFreeThreadPool.h"
 #include "../ThreadPool/threadpool.h"
 #include "../ChatMapping/ChatMapping.h"
 #include "../ChatConn/chat_conn.h"
@@ -59,12 +60,14 @@ public:
 private:
 	
 	connection_pool* connPool;
+	//LockFreeThreadPool<chat_conn>* pool;
 	threadpool<chat_conn>* pool;
 	ChatMapping& chatMapping;
 
 private:
+	//shared_ptr<chat_conn> users;
 	chat_conn* users;
-	
+
 	struct epoll_event events[MAX_EVENT_NUMBER];
 	
 	int listenfd;
