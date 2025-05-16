@@ -8,6 +8,7 @@
 #include <string.h>
 #include <iostream>
 #include <string>
+#include <assert.h>
 #include "../lock/locker.h"
 
 using namespace std;

@@ -20,7 +20,7 @@ void ChatServer::initThreadPool()
 	pool = NULL;
 	try
 	{
-		pool = new threadpool<chat_conn>(connPool, 16, IniConfig::getInstance().getThreadNum());
+		pool = new threadpool<chat_conn>(connPool, 200, IniConfig::getInstance().getThreadNum());
 	}
 	catch (...)
 	{
@@ -63,7 +63,8 @@ void ChatServer::initlistensocket(int efd, short port)
 
 	int ret = bind(listenfd, (struct sockaddr*)&address, sizeof(address));
 	assert(ret >= 0);
-	ret = listen(listenfd, 5);
+	ret = listen(listenfd, SOMAXCONN);
+
 	assert(ret >= 0);
 
 	addfd(epollfd, listenfd, false);
@@ -85,10 +86,10 @@ void ChatServer::startServer()
 {
 	//创建epoll模型
 	//struct epoll_event events[IniConfig::getInstance().getThreadNum()];
-	
-	
+
+
 	initEpoll();
-	
+
 	initlistensocket(epollfd, IniConfig::getInstance().port);
 
 	stop_server = false;	//循环条件
