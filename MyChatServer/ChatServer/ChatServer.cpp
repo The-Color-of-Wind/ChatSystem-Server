@@ -4,6 +4,10 @@
 void ChatServer::readConfigFile()
 {
 	IniConfig::getInstance().iniConfigData();
+
+	Log::get_instance()->init("ServerLog", 200, 800000, 8);	//异步日志模型
+
+
 }
 
 void ChatServer::initConnPool()
@@ -62,6 +66,7 @@ void ChatServer::initlistensocket(int efd, short port)
 	setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(flag));
 
 	int ret = bind(listenfd, (struct sockaddr*)&address, sizeof(address));
+
 	assert(ret >= 0);
 	ret = listen(listenfd, 5);
 	assert(ret >= 0);
@@ -85,10 +90,10 @@ void ChatServer::startServer()
 {
 	//创建epoll模型
 	//struct epoll_event events[IniConfig::getInstance().getThreadNum()];
-	
-	
+
+
 	initEpoll();
-	
+
 	initlistensocket(epollfd, IniConfig::getInstance().port);
 
 	stop_server = false;	//循环条件
@@ -114,12 +119,13 @@ void ChatServer::startServer()
 					int connfd = accept(listenfd, (struct sockaddr*)&client_address, &client_addrlength);
 					if (connfd < 0)
 					{
-						printf("%s:errno is:%d", "accept error", errno);
+						LOG_ERROR("%s:errno is:%d", "accept error", errno);
 						continue;
 					}
 					if (chat_conn::m_user_count >= MAX_FD)
 					{
 						cout << connfd << "Internal server busy" << endl;
+						LOG_ERROR("%s", "Internal server busy");
 						continue;
 					}
 
@@ -132,12 +138,13 @@ void ChatServer::startServer()
 						int connfd = accept(listenfd, (struct sockaddr*)&client_address, &client_addrlength);
 						if (connfd < 0)
 						{
-							printf("%s:errno is:%d", "accept error", errno);
+							LOG_ERROR("%s:errno is:%d", "accept error", errno);
 							continue;
 						}
 						if (chat_conn::m_user_count >= MAX_FD)
 						{
 							cout << connfd << "Internal server busy" << endl;
+							LOG_ERROR("%s", "Internal server busy");
 							continue;
 						}
 
@@ -153,42 +160,8 @@ void ChatServer::startServer()
 			{
 				users[sockfd].removeUser();
 			}
-			/*
-			//处理信号（管道读端发送读事件）
-			else if ((sockfd == pipefd[0]) && (events[i].events & EPOLLIN))
-			{
-				int sig;
-				char signals[1024];
 
-				ret = recv(pipefd[0], signals, sizeof(signals), 0);
-				if (ret == -1) {
-					printf("handle the error\n");
-					continue;
-				}
-				else if (ret == 0) {
-					continue;
-				}
-				else {
-					//处理信号值对应的逻辑
-					for (int i = 0; i < ret; ++i) {
-						switch (signals[i])
-						{
-						case SIGALRM:
-						{
-							//timeout = true;
-							//break;
-						}
-						case SIGTERM:
-						{
-							//stop_server = true;
-						}
-						}
 
-					}
-				}
-
-			}
-			*/
 			//处理客户连接上的读信号
 			else if (events[i].events & EPOLLIN)
 			{
@@ -197,6 +170,9 @@ void ChatServer::startServer()
 				{
 					pool->append(users + sockfd);	//将任务加入队列
 
+				}
+				else {
+					LOG_ERROR("%s:errno is:%d", "read error", errno);
 				}
 
 			}
@@ -215,7 +191,7 @@ void ChatServer::startServer()
 					}
 					else
 					{
-						cerr << "write error" << endl;
+						LOG_ERROR("%s:errno is:%d", "write error", errno);
 					}
 				}
 

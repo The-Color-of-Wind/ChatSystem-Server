@@ -29,6 +29,8 @@ using namespace std;
 #define MAX_EVENT_NUMBER 100000 //最大事件数
 #define MAX_FD 65536           //最大文件描述符
 
+//#define SYNLOG	//同步写日志
+#define ASYNLOG	//异步写日志
 
 //这三个函数在chat_conn.cpp中定义，改变链接属性
 extern int addfd(int epollfd, int fd, bool one_shot);
