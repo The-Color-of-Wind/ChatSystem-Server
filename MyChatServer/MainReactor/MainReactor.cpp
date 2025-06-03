@@ -18,6 +18,8 @@ void print_fd_info(int fd) {
 
 MainReactor::MainReactor(int port, int num_reactors) :port(port), num_reactors(num_reactors)
 {
+	Log::get_instance()->init("ServerLog", 200, 800000, 8);	//异步日志模型
+
 	main_epoll_fd = epoll_create1(0);
 
 	create_listener();
@@ -28,9 +30,9 @@ MainReactor::MainReactor(int port, int num_reactors) :port(port), num_reactors(n
 		subReactor->epoll_fd = epoll_create1(0);
 
 		subReactor->event_fd = eventfd(0, EFD_NONBLOCK);
-		
+
 		chat_conn* conn = new chat_conn(subReactor->epoll_fd, i, -1, subReactor->pool);
-		
+
 		ChatMapping::getInstance().addEventConn(conn);
 
 		add_fd(subReactor->epoll_fd, subReactor->event_fd, true, conn);
@@ -46,7 +48,7 @@ void* MainReactor::startServer(void* arg) {
 	// cout << "MainReactor startServer" << endl;
 	SubReactor* self = static_cast<SubReactor*>(arg);
 	self->startServer(self->epoll_fd);
-	
+
 	return nullptr;
 }
 MainReactor::~MainReactor()
@@ -63,7 +65,7 @@ void MainReactor::create_listener()
 {
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	assert(listen_fd >= 0);
-	
+
 	std::cout << "[debug] socket created listen_fd = " << listen_fd << std::endl;
 
 	int flag = 1;
@@ -109,7 +111,7 @@ void MainReactor::run()
 		//cout << "number" << number<< endl;
 		if (number < 0 && errno != EINTR)
 		{
-			perror ("errno:");
+			LOG_ERROR("%s:errno is:%d", "epoll_wait error", errno);
 			break;
 		}
 		for (int i = 0; i < number; i++)
@@ -127,7 +129,7 @@ void MainReactor::run()
 					//cout << "client_fd" << client_fd << endl;
 					if (client_fd < 0)
 					{
-						printf("%s:errno is:%d", "accept error", errno);
+						LOG_ERROR("%s:errno is:%d", "accept error", errno);
 						continue;
 					}
 
@@ -140,7 +142,7 @@ void MainReactor::run()
 						int client_fd = accept(listen_fd, (struct sockaddr*)&client_address, &client_addrlength);
 						if (client_fd < 0)
 						{
-							printf("%s:errno is:%d", "accept error", errno);
+							LOG_ERROR("%s:errno is:%d", "accept error", errno);
 							continue;
 						}
 
