@@ -5,6 +5,7 @@
 #include <mutex>
 #include <vector>
 #include <string>
+#include <condition_variable>
 
 class DBTaskQueue {
 public:

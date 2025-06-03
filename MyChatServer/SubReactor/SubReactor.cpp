@@ -42,7 +42,7 @@ void SubReactor::dbWriterLoop() {
 		for (const auto& sql : batch) {
 			if (mysql_query(mysql, sql.c_str()) != 0) {
 				//failLogger.log(sql); // 持久化失败SQL
-				printf("SELECT error:%s\n", mysql_error(mysql));
+				LOG_ERROR("%s:errno is:%d", "mysql error", mysql_error(mysql));
 				this->dbTaskQueue->push(sql);
 			}
 		}
@@ -134,7 +134,7 @@ void SubReactor::startServer(int epollFd)
 			// cout << "SubReactor sockfd" << conn->m_sockfd << endl;
 			if (conn->m_sockfd < 0)
 			{
-				printf("%s:errno is:%d", "accept error", errno);
+				LOG_ERROR("%s:errno is:%d", "accept error", errno);
 				continue;
 			}
 			//客户端关闭
@@ -143,41 +143,7 @@ void SubReactor::startServer(int epollFd)
 				//cout << "conn->removeUser() action" << endl;
 				conn->removeUser();
 			}
-			/*
-			//处理信号（管道读端发送读事件）
-			else if ((sockfd == pipefd[0]) && (events[i].events & EPOLLIN))
-			{
-				int sig;
-				char signals[1024];
 
-				ret = recv(pipefd[0], signals, sizeof(signals), 0);
-				if (ret == -1) {
-					printf("handle the error\n");
-					continue;
-				}
-				else if (ret == 0) {
-					continue;
-				}
-				else {
-					//处理信号值对应的逻辑
-					for (int i = 0; i < ret; ++i) {
-						switch (signals[i])
-						{
-						case SIGALRM:
-						{
-							//timeout = true;
-							//break;
-						}
-						case SIGTERM:
-						{
-							//stop_server = true;
-						}
-						}
-					}
-				}
-
-			}
-			*/
 			//处理客户连接上的读信号
 			else if (events[i].events & EPOLLIN)
 			{
@@ -187,7 +153,7 @@ void SubReactor::startServer(int epollFd)
 					//cout << "receive_data success" << endl;
 				}
 				else {
-					cout << "receive_data error" << endl;
+					LOG_ERROR("%s:errno is:%d", "receive_data error", errno);
 				}
 
 			}
@@ -197,7 +163,7 @@ void SubReactor::startServer(int epollFd)
 				// cout << "send_data action" << endl;
 				if (!send_data(conn))
 				{
-					cerr << "send_data error" << endl;
+					LOG_ERROR("%s:errno is:%d", "send_data error", errno);
 				}
 				else {
 					//cerr << "send_data success" << endl;

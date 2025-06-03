@@ -27,6 +27,10 @@ build/
 *.swp
 *.bak
 *.tmp
+*.swl
+*.swm
+*.swn
+*.swo
 
 # 操作系统生成的文件
 .DS_Store
@@ -41,4 +45,7 @@ Thumbs.db
 
 core
 
-2025_04_02_.1
+202*
+.vs/
+*.ipch
+.20*
