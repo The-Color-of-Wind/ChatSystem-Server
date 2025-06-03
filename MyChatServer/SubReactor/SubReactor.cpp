@@ -64,7 +64,6 @@ void SubReactor::initThreadPool()
 	try
 	{
 		pool = new ThreadPool<chat_conn>(connPool, 150);
-		// cout << "ThreadPool init" << endl;
 	}
 	catch (...)
 	{
@@ -109,29 +108,22 @@ bool SubReactor::send_data(chat_conn* conn)
 
 void SubReactor::startServer(int epollFd)
 {
-	// cout << "SubReactor startServer" << endl;
 	epoll_fd = epollFd;
-	// cout << "SubReactor epoll_fd" << epoll_fd << endl;
 
 	stop_server = false;	//循环条件
 	struct epoll_event events[MAX_EVENT_NUMBER];
 
 	while (!stop_server)
 	{
-		//// cout << "IniConfig::getInstance().getThreadNum():" << IniConfig::getInstance().getThreadNum() << endl;
 		int number = epoll_wait(epoll_fd, events, IniConfig::getInstance().getThreadNum(), -1);
-		// cout << "SubReactor number" << number << endl;
 		
 		if (number < 0 && errno != EINTR)
 		{
-			// cout << "errno:" << endl;
 			break;
 		}
 		for (int i = 0; i < number; i++)
 		{
 			auto* conn = static_cast<chat_conn*>(events[i].data.ptr);
-			// cout << "SubReactor epoll_fd" << epoll_fd << endl;
-			// cout << "SubReactor sockfd" << conn->m_sockfd << endl;
 			if (conn->m_sockfd < 0)
 			{
 				LOG_ERROR("%s:errno is:%d", "accept error", errno);
@@ -140,7 +132,6 @@ void SubReactor::startServer(int epollFd)
 			//客户端关闭
 			if (events[i].events & (EPOLLRDHUP | EPOLLHUP | EPOLLERR))
 			{
-				//cout << "conn->removeUser() action" << endl;
 				conn->removeUser();
 			}
 
@@ -148,7 +139,6 @@ void SubReactor::startServer(int epollFd)
 			else if (events[i].events & EPOLLIN)
 			{
 
-				// cout << "receive_data action" << endl;
 				if (receive_data(conn)) {
 					//cout << "receive_data success" << endl;
 				}
@@ -160,7 +150,6 @@ void SubReactor::startServer(int epollFd)
 			//处理写事件
 			else if (events[i].events & EPOLLOUT)
 			{
-				// cout << "send_data action" << endl;
 				if (!send_data(conn))
 				{
 					LOG_ERROR("%s:errno is:%d", "send_data error", errno);

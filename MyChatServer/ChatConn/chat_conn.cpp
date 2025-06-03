@@ -141,9 +141,9 @@ bool chat_conn::receive()
 	int bytes_read = 0;
 
 	while (true) {
-		//cout << "receive recv action " << endl;
+
 		ssize_t n = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
-		////cout << "n" << n<< endl;
+
 		if (n > 0) {
 			m_read_idx += n;
 		}
@@ -163,7 +163,7 @@ bool chat_conn::receive()
 		m_checked_idx = 0;
 		memset(m_read_buf, '\0', READ_BUFFER_SIZE);
 	}
-	//////cout << "m_read_idx:::" << m_read_idx << endl;
+
 
 #ifdef connfdLT
 	ssize_t n = recv(m_sockfd, m_read_buf + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
@@ -193,12 +193,10 @@ bool chat_conn::write()
 	write_lock.unlock();
 
 	ssize_t bytes_sent = 0;
-	//////cout << "write..m_write_buf:::";
-	//////cout << m_write_buf << "+" << m_write_idx << endl;
+
 
 	if (bytes_to_send == 0)
 	{
-		//////cout << "error: send message data = 0" << endl;
 
 		writeInit();
 		return true;
@@ -212,18 +210,16 @@ bool chat_conn::write()
 		if (temp == -1) {
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
 
-				//////cout << "suf 缓冲区已满，设置为可写，稍后再试" << endl;
+
 				modfd(m_epollfd, m_sockfd, EPOLLOUT, this);
 				return true;
 			}
 			else if (errno == ECONNRESET || errno == EPIPE) {
-				//////cout << "连接被重置或管道关闭，处理连接断开" << endl;
 
 				perror("error: Connection reset or closed");
 				return false;
 			}
 			else {
-				//////cout << "other error , exit." << endl;
 				perror("send failed");
 				return false;
 			}
@@ -233,8 +229,6 @@ bool chat_conn::write()
 		}
 	}
 	write_lock.unlock();
-	//////cout << "if success，set EPOLLIN" << endl;
-
 
 	// 如果数据发送完毕，可以恢复监听 EPOLLIN
 	writeInit();
@@ -292,7 +286,7 @@ bool chat_conn::write()
 
 void chat_conn::push_message(const std::string& msg, ThreadPool<chat_conn>& pool) {
 	{
-		//cout << "push_message action" << endl;
+
 		std::lock_guard<std::mutex> lock(mtx);
 		msg_queue.push(msg);
 		if (is_processing) return;  // 当前已有任务在处理，直接返回
@@ -303,9 +297,8 @@ void chat_conn::push_message(const std::string& msg, ThreadPool<chat_conn>& pool
 }
 
 void chat_conn::submit_next(ThreadPool<chat_conn>& pool) {
-	//cout << "submit_next action" << endl;
+
 	//auto self = shared_from_this();  // 避免 this 提前析构
-	////cout << "submit_next self" << endl;
 	chat_conn* self = this;
 	pool.submit([self, &pool]() {
 		std::string msg;
@@ -360,7 +353,6 @@ void chat_conn::handle_message(const string& msg)
 
 chat_conn::CHAT_CODE chat_conn::process_read(Json::Value jsonData)
 {
-	//////cout << "process_read():::";
 	if (jsonData["type"].asString() == "login")
 		return LOGIN;
 	else if (jsonData["type"].asString() == "register")
@@ -394,11 +386,11 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 {
 	string jsonStr;
 	int sendFd = m_sockfd;
-	//////cout << "ret::" << ret << endl;
+
 	switch (ret)
 	{
 	case LOGIN: {
-		//////cout << "LOGIN" << endl;
+
 		if (jsonData.isMember("user_id") && jsonData.isMember("user_password")) {
 			string userid = jsonData["user_id"].asString();
 			string userpassword = jsonData["user_password"].asString();
@@ -407,7 +399,7 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 			jsonStr += getMysql_UserResult("login", sqlStatement, jsonData);
 		}
 		else {
-			////cout << "user_id   user_password" << endl;
+
 			return false;
 		}
 
@@ -429,14 +421,14 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 	case FRIENDS: {
 		if (jsonData.isMember("user_id")) {
 			string user_id = jsonData["user_id"].asString();
-			//////cout << "user_id::" << user_id << endl;
+
 
 			string sqlStatement = "SELECT m_user.*, m_friends_relation.friend_relation, m_friends_relation.created_relation FROM m_user "
 				"JOIN m_friends_relation ON m_user.user_id = m_friends_relation.friend_id "
 				"WHERE m_friends_relation.user_id = '" + user_id + "'; ";
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += getMysql_FriendsResult("friends", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
@@ -450,9 +442,9 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 				"JOIN m_chatlist ON m_chatlist.comm_id = m_user.user_id "
 				"WHERE m_chatlist.user_id = '" + user_id + "'; ";
 
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += getMysql_ChatsResult("chatting", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
@@ -461,18 +453,7 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 	case SEND_MESSAGE: {
 		string sqlStatement;
 		jsonStr += sendMessage_Mysql("send_message", sqlStatement, jsonData);
-		/*
-		string send_id = jsonData["send_id"].asString();
-		string receiver_id = jsonData["receiver_id"].asString();
-		string chat_type = jsonData["chat_type"].asString();
-		string message_body = jsonData["message_body"].asString();
-		string message_type = jsonData["message_type"].asString();
-		string file_path = jsonData["file_path"].asString();
-		string message_timestamp = jsonData["message_timestamp"].asString();
-		sqlStatement = "CALL AddFriendMessage('" + send_id + "', '" + receiver_id + "', '" + chat_type + "', '"
-			+ message_body + "', '" + message_type + "', '" + file_path + "', 'send', '" + message_timestamp + "', @new_message_id);";
-		// 加入数据库的操作中
-		*/
+
 		break;
 	}
 	case RECEIVE_MESSAGE: {
@@ -500,21 +481,21 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 		if (jsonData.isMember("user_id") && jsonData.isMember("comm_id")) {
 
 			jsonStr += updateChat_Mysql(jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
 		break;
 	}
 	case GET_UNREAD_MESSAGES: {
-		//////cout << "GET_UNREAD_MESSAGES " << endl;
+
 		if (jsonData.isMember("user_id")) {
-			//////cout << "jsonData.isMember  " << endl;
+
 			string user_id = jsonData["user_id"].asString();
 			string sqlStatement = "SELECT * FROM m_friends_message WHERE(receiver_id = '" + user_id + "' AND message_status = 'received'); ";
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += getFriendsUnreadMessages_Mysql("get_unread_messages", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
@@ -525,51 +506,51 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 			string user_id = jsonData["user_id"].asString();
 			string search_id = jsonData["search_id"].asString();
 			string sqlStatement = "SELECT * FROM m_user WHERE user_id = '" + search_id + "';";
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += searchUserInformation_Mysql("search_user", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
 		break;
 	}
 	case ADD_FRIEND: {
-		//////cout << "ADD_FRIEND " << endl;
+
 		if (jsonData.isMember("user_id")) {
 			string user_id = jsonData["user_id"].asString();
 			string friend_id = jsonData["friend_id"].asString();
 			string sqlStatement = "CALL AddFriend ('" + user_id + "', '" + friend_id + "');";
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += modifyFriend_Mysql("get_unread_messages", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
 		break;
 	}
 	case ACCEPT_FRIEND: {
-		//////cout << "ACCEPT_FRIEND " << endl;
+
 		if (jsonData.isMember("user_id")) {
 			string user_id = jsonData["user_id"].asString();
 			string friend_id = jsonData["friend_id"].asString();
 			string sqlStatement = "CALL UpdateFriend ('" + user_id + "', '" + friend_id + "' , 'accepted');";
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += modifyFriend_Mysql("accept_friend", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
 		break;
 	}
 	case DELETE_FRIEND: {
-		//////cout << "DELETE_FRIEND " << endl;
+
 		if (jsonData.isMember("user_id")) {
 			string user_id = jsonData["user_id"].asString();
 			string friend_id = jsonData["friend_id"].asString();
 			string sqlStatement = "CALL DeleteFriend ('" + user_id + "', '" + friend_id + "');";
-			//////cout << "sqlStatement" << sqlStatement << endl;
+
 			jsonStr += modifyFriend_Mysql("delete_friend", sqlStatement, jsonData);
-			//////cout << "jsonStr = " << jsonStr << endl;
+
 		}
 		else
 			return false;
@@ -599,7 +580,7 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 }
 
 
-//string chat_conn::getMysqlResult(const string &type, const string &sqlStatement)
+
 
 string chat_conn::getMysql_UserResult(const string& type, const string& sqlStatement, Json::Value jsonData)
 {
@@ -611,29 +592,28 @@ string chat_conn::getMysql_UserResult(const string& type, const string& sqlState
 	}
 	MYSQL_RES* result = mysql_store_result(mysql);	//取出结果集
 	if (!result) {
-		//////cout << "Failed to store result" << endl;
+
 		return "error";
 	}
 	int num_fields = mysql_num_fields(result);
-	//////cout << "num_fields:::" << num_fields << endl;
+
 	MYSQL_FIELD* fields = mysql_fetch_fields(result);//返回所有字段结构的数组（这一步通常不影响程序流程，除非你需要字段信息）
 
 	string responseJsonStr;
 	json responseJson;
 
 	if (mysql_num_rows(result) == 0) {
-		//////cout << "No data rows in the result set" << endl;
+
 		responseJson["type"] = type;
 		responseJson["status"] = "error";
 		responseJson["message"] = "name or code error";
 		
 	}
 	else {
-		//////cout << "mysql_num_rows != 0" << endl;
+
 		while (MYSQL_ROW row = mysql_fetch_row(result)) {
-			//////cout << "row             aaa" << endl;
+
 			if (row == NULL) {
-				//////cout << "Failed to fetch row" << endl;
 				continue;  // 继续处理下一行
 			}
 			responseJson["type"] = type;
@@ -648,8 +628,7 @@ string chat_conn::getMysql_UserResult(const string& type, const string& sqlState
 			responseJson["user_created"] = row[7];
 			ChatMapping::getInstance().addUserSocket(row[0], m_eventfd, this);
 			//sub_reactors[idx]->map_id_socket.addMap(userid, client_fd);
-			//////cout << "userID = " << row[0] << endl;
-			//////cout << "m_sockfd = " << m_sockfd << endl;
+
 			this->user->setUserId(row[0]);
 			this->user->setUserPassword(row[1]);
 			this->user->setUserPhone(row[2]);
@@ -665,7 +644,6 @@ string chat_conn::getMysql_UserResult(const string& type, const string& sqlState
 		}
 	}
 	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
-	//////cout << "responseJsonStr" << responseJsonStr << endl;
 	return responseJsonStr;
 }
 
@@ -674,11 +652,9 @@ string chat_conn::setMysql_UserResult(const string& type, const string& sqlState
 	mysql = NULL;
 	connectionRAII mysqlcon(&mysql, connPool);
 	if (mysql_query(mysql, sqlStatement.c_str())) {
-		////cout << "SELECT error:%s\n" << mysql_error(mysql) << endl;
 		return "error";
 	}
 	if (mysql_query(mysql, "SELECT @new_user_id;")) {
-		////cout << "mysql_query() failed: " << mysql_error(mysql) << endl;
 		return "error";
 	}
 
@@ -693,13 +669,12 @@ string chat_conn::setMysql_UserResult(const string& type, const string& sqlState
 	else {
 		MYSQL_ROW row = mysql_fetch_row(res);
 		if (row) {
-			//////cout << "New user ID: " << row[0] << endl;
 			responseJson["type"] = type;
 			responseJson["status"] = "success";
 			responseJson["user_id"] = row[0];
 		}
 		else {
-			//////cout << "No result returned." << endl;
+
 		}
 	}
 
@@ -723,14 +698,13 @@ string chat_conn::getMysql_FriendsResult(const string& type, const string& sqlSt
 		return "error";
 	}
 	int num_fields = mysql_num_fields(result);
-	//////cout << "num_fields:::" << num_fields << endl;
+
 	MYSQL_FIELD* fields = mysql_fetch_fields(result);//返回所有字段结构的数组（这一步通常不影响程序流程，除非你需要字段信息）
 
 	string responseJsonStr;
 	json responseJson;
 
 	if (mysql_num_rows(result) == 0) {
-		//////cout << "No data rows in the result set" << endl;
 		responseJson["type"] = type;
 		responseJson["status"] = "null";
 		responseJson["message"] = "have not friends";
@@ -738,7 +712,6 @@ string chat_conn::getMysql_FriendsResult(const string& type, const string& sqlSt
 	else {
 		while (MYSQL_ROW row = mysql_fetch_row(result)) {
 			if (row == NULL) {
-				//////cout << "Failed to fetch row" << endl;
 				continue;  // 继续处理下一行
 			}
 			responseJson["type"] = type;
@@ -772,7 +745,7 @@ string chat_conn::getMysql_ChatsResult(const string& type, const string& sqlStat
 	}
 	MYSQL_RES* result = mysql_store_result(mysql);	//取出结果集
 	if (!result) {
-		//////cout << "Failed to store result" << endl;
+
 		return "error";
 	}
 	int num_fields = mysql_num_fields(result);
@@ -783,7 +756,7 @@ string chat_conn::getMysql_ChatsResult(const string& type, const string& sqlStat
 	
 
 	if (mysql_num_rows(result) == 0) {
-		//////cout << "No data rows in the result set" << endl;
+
 		responseJson["type"] = type;
 		responseJson["status"] = "null";
 		responseJson["message"] = "have not chatting";
@@ -792,7 +765,7 @@ string chat_conn::getMysql_ChatsResult(const string& type, const string& sqlStat
 	else {
 		while (MYSQL_ROW row = mysql_fetch_row(result)) {
 			if (row == NULL) {
-				//////cout << "Failed to fetch row" << endl;
+
 				continue;  // 继续处理下一行
 			}
 			responseJson["type"] = type;
@@ -804,7 +777,7 @@ string chat_conn::getMysql_ChatsResult(const string& type, const string& sqlStat
 			responseJson["last_time"] = row[5];
 			responseJson["unread_count"] = row[6];
 			responseJson["chat_status"] = row[7];
-			//////cout << "row[7]" << row[7] << endl;
+
 			responseJson["user_name"] = row[8];
 			responseJson["user_avatar"] = row[9];
 
@@ -883,65 +856,6 @@ string chat_conn::sendMessage_Mysql(const string& type, string& sqlStatement, Js
 	return responseJsonStr;
 }
 
-/*
-string chat_conn::sendMessage_Mysql(const string& type, string& sqlStatement, Json::Value jsonData)
-{
-
-	string send_id = jsonData["send_id"].asString();
-	string receiver_id = jsonData["receiver_id"].asString();
-	string chat_type = jsonData["chat_type"].asString();
-	string message_body = jsonData["message_body"].asString();
-	string message_type = jsonData["message_type"].asString();
-	string file_path = jsonData["file_path"].asString();
-	string message_timestamp = jsonData["message_timestamp"].asString();
-	
-	string responseJsonStr;
-	json responseJson;
-
-	auto mapping = ChatMapping::getInstance().getSocketByUserId(receiver_id);
-	if (!mapping.has_value()) {
-		sqlStatement = "CALL AddFriendMessage('" + send_id + "', '" + receiver_id + "', '" + chat_type + "', '"
-			+ message_body + "', '" + message_type + "', '" + file_path + "', 'send', '" + message_timestamp + "', @new_message_id);";
-		////cout << "sqlStatement" << sqlStatement << endl;
-		dbTaskQueue->push(sqlStatement);
-
-	}
-	else {
-		int eventdFd = mapping->first;	// 第i个subReactor
-		chat_conn* conn = mapping->second;
-		this->sendMessage = true;
-
-		responseJson["type"] = "receive_message";
-		responseJson["status"] = "success";
-		responseJson["send_id"] = send_id;
-		responseJson["receiver_id"] = receiver_id;
-		responseJson["chat_type"] = chat_type;
-		responseJson["message_body"] = message_body;
-		responseJson["message_type"] = message_type;
-		responseJson["file_path"] = file_path;
-		responseJson["message_timestamp"] = message_timestamp;
-		responseJsonStr = responseJson.dump();
-		responseJsonStr += "\n";
-
-		conn->write_lock.lock();
-		copy(responseJsonStr.begin(), responseJsonStr.begin() + responseJsonStr.size(), conn->m_write_buf);
-		conn->m_write_buf[responseJsonStr.size()] = '\0';
-		conn->m_write_idx += responseJsonStr.size();
-		conn->write_lock.unlock();
-		modfd(conn->m_epollfd, conn->m_sockfd, EPOLLOUT, conn);	//修改成写监听
-		
-		sqlStatement = "CALL AddFriendMessage('" + send_id + "', '" + receiver_id + "', '" + chat_type + "', '"
-			+ message_body + "', '" + message_type + "', '" + file_path + "', 'received', '" + message_timestamp + "', @new_message_id);";
-		dbTaskQueue->push(sqlStatement);
-
-	}
-	
-	responseJson["type"] = type;
-	responseJson["status"] = "success";
-	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
-	return responseJsonStr;
-}
-*/
 string chat_conn::updateChat_Mysql(Json::Value jsonData)
 {
 	string type = jsonData["type"].asString();
@@ -958,7 +872,7 @@ string chat_conn::updateChat_Mysql(Json::Value jsonData)
 		+ last_message_type + "', last_time = '" + last_time + "', unread_count = '" + unread_count + "', chat_status = '" + chat_status + "' "
 		"WHERE(m_chatlist.user_id = '" + user_id + "' AND m_chatlist.comm_id = '" + comm_id + "'); ";
 
-	//////cout << "sqlStatement" << sqlStatement << endl;
+
 
 	mysql = NULL;
 	connectionRAII mysqlcon(&mysql, connPool);
@@ -985,7 +899,7 @@ string chat_conn::updateChat_Mysql(Json::Value jsonData)
 	}
 
 	sqlStatement = "UPDATE m_friends_message SET message_status = 'read' WHERE(m_friends_message.sender_id = '" + comm_id + "' AND m_friends_message.receiver_id = '" + user_id + "'); ";
-	//////cout << "sqlStatement" << sqlStatement << endl;
+
 	if (mysql_query(mysql, sqlStatement.c_str())) {
 		cerr << "mysql error:%s\n" << endl;
 		return "mysql error";
@@ -1011,13 +925,13 @@ string chat_conn::getFriendsUnreadMessages_Mysql(const string& type, const strin
 		return "error";
 	}
 	int num_fields = mysql_num_fields(result);
-	//////cout << "num_fields:::" << num_fields << endl;
+
 	MYSQL_FIELD* fields = mysql_fetch_fields(result);//返回所有字段结构的数组（这一步通常不影响程序流程，除非你需要字段信息）
 
 	string responseJsonStr;
 	json responseJson;
 	
-	//////cout << "mysql_num_rows(result) = " << mysql_num_rows(result) << endl;
+
 	if (mysql_num_rows(result) == 0) {
 
 		//////cout << "No data rows in the result set" << endl;
@@ -1068,8 +982,7 @@ string chat_conn::searchUserInformation_Mysql(const string& type, const string& 
 
 	string responseJsonStr;
 	json responseJson;
-	
-	//////cout << "mysql_num_rows(result) = " << mysql_num_rows(result) << endl;
+
 	if (mysql_num_rows(result) == 0) {
 
 		//////cout << "No data rows in the result set" << endl;
