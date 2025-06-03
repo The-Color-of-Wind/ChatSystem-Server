@@ -154,42 +154,7 @@ void ChatServer::startServer()
 			{
 				users[sockfd].removeUser();
 			}
-			/*
-			//处理信号（管道读端发送读事件）
-			else if ((sockfd == pipefd[0]) && (events[i].events & EPOLLIN))
-			{
-				int sig;
-				char signals[1024];
-
-				ret = recv(pipefd[0], signals, sizeof(signals), 0);
-				if (ret == -1) {
-					printf("handle the error\n");
-					continue;
-				}
-				else if (ret == 0) {
-					continue;
-				}
-				else {
-					//处理信号值对应的逻辑
-					for (int i = 0; i < ret; ++i) {
-						switch (signals[i])
-						{
-						case SIGALRM:
-						{
-							//timeout = true;
-							//break;
-						}
-						case SIGTERM:
-						{
-							//stop_server = true;
-						}
-						}
-
-					}
-				}
-
-			}
-			*/
+			
 			//处理客户连接上的读信号
 			else if (events[i].events & EPOLLIN)
 			{
