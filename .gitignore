@@ -27,6 +27,10 @@ build/
 *.swp
 *.bak
 *.tmp
+*.swl
+*.swm
+*.swn
+*.swo
 
 # 操作系统生成的文件
 .DS_Store
@@ -34,9 +38,6 @@ Thumbs.db
 
 # 日志文件
 *.log
-# 忽略 ServerLog 文件
-*Log*
-*log*
 
 
 # 包含调试符号的文件
@@ -45,3 +46,6 @@ Thumbs.db
 core
 
 202*
+.vs/
+*.ipch
+.20*
