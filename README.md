@@ -101,6 +101,7 @@
   - 操作系统：Ubuntu 20.04
   - 数据库：MySQL 8.0.41 （数据库表私聊我）
   - 
+
 - 构建
   - sudo apt-get install g++
   - sudo apt-get install make
@@ -109,6 +110,9 @@
   - make
   - 修改配置文件（端口默认12345）
   - ./startserv
+
+- 数据库
+  - sql目录下有两个数据库文件，分别是 结构 / 结构+数据，可根据需求选择
 
 ---
 
