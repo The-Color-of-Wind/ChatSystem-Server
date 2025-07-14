@@ -132,7 +132,14 @@ public:
 	bool getSendMessage() { return this->sendMessage; }
 
 	bool parse_messages();
+	// 提交下一个处理任务（只能由线程池线程调用）
+	void submit_next(ThreadPool<chat_conn>& pool);
 
+	// 实际处理消息逻辑（示例）
+	void handle_message(const std::string& msg);
+
+	// 新消息入队并尝试提交处理任务
+	void push_message(const std::string& msg, ThreadPool<chat_conn>& pool);
 public:
 	//每一用户连接共有的
 	int m_epollfd;
@@ -177,19 +184,13 @@ public:
 
 
 
-	// 新消息入队并尝试提交处理任务
-	void push_message(const std::string& msg, ThreadPool<chat_conn>& pool);
 public:
 	std::mutex mtx;
 	std::queue<std::string> msg_queue; // 消息队列
 	bool is_processing;                // 是否正在处理中
 
 
-	// 提交下一个处理任务（只能由线程池线程调用）
-	void submit_next(ThreadPool<chat_conn>& pool);
 
-	// 实际处理消息逻辑（示例）
-	void handle_message(const std::string& msg);
 };
 
 #endif
