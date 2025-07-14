@@ -95,7 +95,6 @@ bool chat_conn::parse_messages()
 {
 	//cout << "parse_messages action " << endl;
 	while (m_read_idx > 0) {
-		////cout << "m_read_idx "<< m_read_idx << endl;
 		if (m_read_idx < head_len)
 			return false;
 
@@ -103,19 +102,22 @@ bool chat_conn::parse_messages()
 		memcpy(&net_len, m_read_buf, 4);
 		uint32_t expected_len = 0;	// 数据头
 		expected_len = ntohl(net_len);
-		////cout << "m_read_idx " << m_read_idx << endl;
+		//cout << "m_read_idx " << m_read_idx << endl;
 		if (m_read_idx < expected_len) {
 			cerr << "data no enough，continue" << endl;
 			return false;	// 数据不完整，继续等待
 		}
-		////cout << "m_read_buf " << m_read_buf << endl;
+		
+		// cout << "m_read_buf:" << string(m_read_buf, m_read_idx) << endl;
+
+		//cout << "m_read_buf " << m_read_buf << endl;
 		// 删除前四个字节
 		memmove(m_read_buf, m_read_buf + head_len, m_read_idx - head_len);
 		m_read_idx -= head_len;
 
 		string msg = string(m_read_buf, expected_len);
 		push_message(msg, *(this->pool));
-		////cout << "push_message " << endl;
+		//cout << "push_message " << endl;
 
 		
 		// 如果长度完全相等，则返回true
@@ -182,6 +184,8 @@ bool chat_conn::receive()
 bool chat_conn::write()
 {
 
+	// cout << "m_write_buf:" << string(m_write_buf, m_write_idx) << endl;
+
 
 	int temp = 0;
 	int newadd = 0;
@@ -235,51 +239,7 @@ bool chat_conn::write()
 	modfd(m_epollfd, m_sockfd, EPOLLIN, this);
 
 
-	/*
-	while (1)
-	{
-		temp = writev(m_sockfd, m_iv, 1);
-		if (temp > 0)
-		{
-			//更新已发送字节
-			bytes_have_send += temp;
-			bytes_to_send -= temp;
-			//偏移文件iovec的指针
-			newadd = bytes_have_send - m_write_idx;
-
-
-		}
-		if (temp < 0)
-		{
-			if (errno == EAGAIN || errno == EWOULDBLOCK)
-			{
-				//////cout << "缓冲区满，稍后再试" << endl;
-				modfd(m_epollfd, m_sockfd, EPOLLOUT);
-				return true;
-			}
-			else if (errno == EINTR)
-			{
-
-				//////cout << "写操作被信号中断，重试" << endl;
-
-				continue;
-			}
-			else
-			{
-				//////cout << "发生了其他错误，取消映射并返回失败" << endl;
-				return false;
-			}
-		}
-
-		if (bytes_to_send <= 0)
-		{
-			//////cout << "发送完成" << endl;
-			init();
-			modfd(m_epollfd, m_sockfd, EPOLLIN);
-		}
-
-	}
-	*/
+	
 	return true;
 }
 
@@ -560,6 +520,9 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 		return false;
 	}
 
+
+	//cout << "jsonStr : " << jsonStr << endl;
+
 	if (jsonStr.size() > WRITE_BUFFER_SIZE - 1) {
 		cerr << "Data exceeds buffer size!" << endl;
 		return false;
@@ -569,11 +532,12 @@ bool chat_conn::process_write(chat_conn::CHAT_CODE ret, Json::Value jsonData)
 		uint32_t jsonLen = jsonStr.size();
 		uint32_t netLen = htonl(jsonLen);
 		memcpy(m_write_buf, &netLen, 4);
-
-		copy(jsonStr.begin(), jsonStr.begin() + jsonStr.size(), m_write_buf + 4);
-		m_write_buf[jsonStr.size()] = '\0';
+		memcpy(m_write_buf + 4, jsonStr.c_str(), jsonLen);  // 不加 \0
+		//copy(jsonStr.begin(), jsonStr.begin() + jsonStr.size(), m_write_buf + 4);
+		//m_write_buf[jsonStr.size()] = '\0';
 		m_write_idx = 4 + jsonLen;
 		write_lock.unlock();
+
 	}
 
 	return true;
@@ -601,13 +565,14 @@ string chat_conn::getMysql_UserResult(const string& type, const string& sqlState
 
 	string responseJsonStr;
 	json responseJson;
+	json responseJsonArray;
 
 	if (mysql_num_rows(result) == 0) {
 
 		responseJson["type"] = type;
 		responseJson["status"] = "error";
 		responseJson["message"] = "name or code error";
-		
+		responseJsonArray.push_back(responseJson);
 	}
 	else {
 
@@ -626,6 +591,7 @@ string chat_conn::getMysql_UserResult(const string& type, const string& sqlState
 			responseJson["user_avatar"] = row[5];
 			responseJson["user_status"] = row[6];
 			responseJson["user_created"] = row[7];
+			responseJsonArray.push_back(responseJson);
 			ChatMapping::getInstance().addUserSocket(row[0], m_eventfd, this);
 			//sub_reactors[idx]->map_id_socket.addMap(userid, client_fd);
 
@@ -643,7 +609,7 @@ string chat_conn::getMysql_UserResult(const string& type, const string& sqlState
 			this->user->setUserId("active");
 		}
 	}
-	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
+	responseJsonStr = responseJsonArray.dump(); responseJsonStr += "\n";
 	return responseJsonStr;
 }
 
@@ -685,6 +651,7 @@ string chat_conn::setMysql_UserResult(const string& type, const string& sqlState
 
 string chat_conn::getMysql_FriendsResult(const string& type, const string& sqlStatement, Json::Value jsonData)
 {
+	// cout << "sqlStatement::" << sqlStatement << endl;
 	mysql = NULL;
 	connectionRAII mysqlcon(&mysql, connPool);
 
@@ -703,11 +670,13 @@ string chat_conn::getMysql_FriendsResult(const string& type, const string& sqlSt
 
 	string responseJsonStr;
 	json responseJson;
+	json responseJsonArray;
 
 	if (mysql_num_rows(result) == 0) {
 		responseJson["type"] = type;
 		responseJson["status"] = "null";
 		responseJson["message"] = "have not friends";
+		responseJsonArray.push_back(responseJson);
 	}
 	else {
 		while (MYSQL_ROW row = mysql_fetch_row(result)) {
@@ -725,11 +694,11 @@ string chat_conn::getMysql_FriendsResult(const string& type, const string& sqlSt
 			responseJson["user_created"] = row[7];
 			responseJson["friend_relation"] = row[8];
 			responseJson["created_relation"] = row[9];
-
+			responseJsonArray.push_back(responseJson);
 		}
 	}
 
-	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
+	responseJsonStr = responseJsonArray.dump(); responseJsonStr += "\n";
 	return responseJsonStr;
 
 }
@@ -753,14 +722,15 @@ string chat_conn::getMysql_ChatsResult(const string& type, const string& sqlStat
 
 	string responseJsonStr;
 	json responseJson;
-	
+	json responseJsonArray;
+
 
 	if (mysql_num_rows(result) == 0) {
 
 		responseJson["type"] = type;
 		responseJson["status"] = "null";
 		responseJson["message"] = "have not chatting";
-		
+		responseJsonArray.push_back(responseJson);
 	}
 	else {
 		while (MYSQL_ROW row = mysql_fetch_row(result)) {
@@ -780,12 +750,12 @@ string chat_conn::getMysql_ChatsResult(const string& type, const string& sqlStat
 
 			responseJson["user_name"] = row[8];
 			responseJson["user_avatar"] = row[9];
-
+			responseJsonArray.push_back(responseJson);
 
 			
 		}
 	}
-	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
+	responseJsonStr = responseJsonArray.dump(); responseJsonStr += "\n";
 	return responseJsonStr;
 
 }
@@ -828,9 +798,14 @@ string chat_conn::sendMessage_Mysql(const string& type, string& sqlStatement, Js
 		responseJsonStr += "\n";
 
 		conn->write_lock.lock();
-		copy(responseJsonStr.begin(), responseJsonStr.begin() + responseJsonStr.size(), conn->m_write_buf);
-		conn->m_write_buf[responseJsonStr.size()] = '\0';
-		conn->m_write_idx += responseJsonStr.size();
+		uint32_t jsonLen = responseJsonStr.size();
+		uint32_t netLen = htonl(jsonLen);
+		memcpy(conn->m_write_buf, &netLen, 4);
+		memcpy(conn->m_write_buf + 4, responseJsonStr.c_str(), jsonLen);
+		conn->m_write_idx = 4 + jsonLen;
+		//copy(responseJsonStr.begin(), responseJsonStr.begin() + responseJsonStr.size(), conn->m_write_buf);
+		//conn->m_write_buf[responseJsonStr.size()] = '\0';
+		//conn->m_write_idx += responseJsonStr.size();
 		conn->write_lock.unlock();
 		modfd(conn->m_epollfd, conn->m_sockfd, EPOLLOUT, conn);	//修改成写监听
 
@@ -872,8 +847,6 @@ string chat_conn::updateChat_Mysql(Json::Value jsonData)
 		+ last_message_type + "', last_time = '" + last_time + "', unread_count = '" + unread_count + "', chat_status = '" + chat_status + "' "
 		"WHERE(m_chatlist.user_id = '" + user_id + "' AND m_chatlist.comm_id = '" + comm_id + "'); ";
 
-
-
 	mysql = NULL;
 	connectionRAII mysqlcon(&mysql, connPool);
 
@@ -887,6 +860,9 @@ string chat_conn::updateChat_Mysql(Json::Value jsonData)
 	}
 	unsigned long affectedRows = mysql_affected_rows(mysql);
 
+	responseJson["type"] = type;
+	responseJson["status"] = "success";
+	/*
 	if (affectedRows > 0) {
 		responseJson["type"] = type;
 		responseJson["status"] = "success";
@@ -897,7 +873,7 @@ string chat_conn::updateChat_Mysql(Json::Value jsonData)
 		responseJson["message"] = "error";
 		//////cout << "No rows updated or query failed." << endl;
 	}
-
+	*/
 	sqlStatement = "UPDATE m_friends_message SET message_status = 'read' WHERE(m_friends_message.sender_id = '" + comm_id + "' AND m_friends_message.receiver_id = '" + user_id + "'); ";
 
 	if (mysql_query(mysql, sqlStatement.c_str())) {
@@ -930,7 +906,7 @@ string chat_conn::getFriendsUnreadMessages_Mysql(const string& type, const strin
 
 	string responseJsonStr;
 	json responseJson;
-	
+	json responseJsonArray;
 
 	if (mysql_num_rows(result) == 0) {
 
@@ -938,7 +914,7 @@ string chat_conn::getFriendsUnreadMessages_Mysql(const string& type, const strin
 		responseJson["type"] = type;
 		responseJson["status"] = "null";
 		responseJson["message"] = "don't have messages";
-
+		responseJsonArray.push_back(responseJson);
 		
 	}
 	else {
@@ -956,11 +932,11 @@ string chat_conn::getFriendsUnreadMessages_Mysql(const string& type, const strin
 			responseJson["message_type"] = row[5];
 			responseJson["file_path"] = row[6];
 			responseJson["message_timestamp"] = row[8];
-
+			responseJsonArray.push_back(responseJson);
 			
 		}
 	}
-	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
+	responseJsonStr = responseJsonArray.dump(); responseJsonStr += "\n";
 	return responseJsonStr;
 
 }
@@ -982,14 +958,14 @@ string chat_conn::searchUserInformation_Mysql(const string& type, const string& 
 
 	string responseJsonStr;
 	json responseJson;
-
+	json responseJsonArray;
 	if (mysql_num_rows(result) == 0) {
 
 		//////cout << "No data rows in the result set" << endl;
 		responseJson["type"] = type;
 		responseJson["status"] = "null";
 		responseJson["message"] = "don't have messages";
-
+		responseJsonArray.push_back(responseJson);
 		
 	}
 	else {
@@ -1008,12 +984,12 @@ string chat_conn::searchUserInformation_Mysql(const string& type, const string& 
 			responseJson["user_avatar"] = row[5];
 			responseJson["user_status"] = row[6];
 			responseJson["user_created"] = row[7];
-
+			responseJsonArray.push_back(responseJson);
 			
 		}
 	}
 
-	responseJsonStr = responseJson.dump(); responseJsonStr += "\n";
+	responseJsonStr = responseJsonArray.dump(); responseJsonStr += "\n";
 	return responseJsonStr;
 }
 
