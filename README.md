@@ -67,21 +67,27 @@
 
 ## 类概述
 
-[读取配置文件](ModuleDescription/IniConfig.md)
+[读取配置文件（IniConfig）](ModuleDescription/IniConfig.md)
 
-[网络通信](ModuleDescription/ChatServer.md)
+[主Reactor（MainReactor）](ModuleDescription/MainReactor.md)
 
-[业务处理](ModuleDescription/ChatConn.md)
+[子Reactor（SubReactor）](ModuleDescription/SubReactor.md)
 
-[线程池](ModuleDescription/ThreadPool.md)
+[网络通信（ChatServer）](ModuleDescription/ChatServer.md)
 
-[数据库连接池](ModuleDescription/MysqlConnectPool.md)
+[业务处理（ChatConn）](ModuleDescription/ChatConn.md)
 
-[锁](ModuleDescription/lock.md)
+[线程池（ThreadPool）](ModuleDescription/ThreadPool.md)
 
-[id && fd 映射](ModuleDescription/ChatMapping.md)
+[数据库任务队列（DBTaskQueue）](ModuleDescription/DBTaskQueue.md)
 
-[日志](ModuleDescription/log.md)
+[数据库连接池（MysqlConnectPool）](ModuleDescription/MysqlConnectPool.md)
+
+[锁（lock）](ModuleDescription/lock.md)
+
+[id && fd 映射（ChatMapping）](ModuleDescription/ChatMapping.md)
+
+[日志（log）](ModuleDescription/log.md)
 
 ---
 
