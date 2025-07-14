@@ -60,13 +60,12 @@
 
 ---
 
-## 服务器框架（未更新 version3）
-![55857738ed533bb911103e999148fb0](https://github.com/user-attachments/assets/4978336a-a5e4-41e3-b974-c24102199cfc)
-![7b1cca322ae53001663766a33e3e685](https://github.com/user-attachments/assets/5c54e15a-cf95-42ee-b578-963c651635a2)
+## 服务器框架
+<img width="701" height="742" alt="image" src="https://github.com/user-attachments/assets/b6def763-9b87-4a81-b5ab-84d28d57cdaa" />
 
 ---
 
-## 类概述（未更新 version3）
+## 类概述
 
 [读取配置文件](ModuleDescription/IniConfig.md)
 
